@@ -28,7 +28,7 @@ public class LocalPluginRepository {
         if (jarFiles != null) {
             for (File jarFile : jarFiles) {
                 try {
-                    loadPlugin(jarFile).start();
+                    startPlugin(loadPlugin(jarFile));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -54,7 +54,7 @@ public class LocalPluginRepository {
                     for (WatchEvent<?> event : key.pollEvents()) {
                         if (event.kind() == StandardWatchEventKinds.ENTRY_CREATE) {
                             try {
-                                loadPlugin(new File(pluginDir, event.context().toString())).start();
+                                startPlugin(loadPlugin(new File(pluginDir, event.context().toString())));
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -75,6 +75,7 @@ public class LocalPluginRepository {
     public void stop() {
         try {
             watchService.close();
+            fileMap.forEach(((path, plugin) -> plugin.stop()));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -82,9 +83,7 @@ public class LocalPluginRepository {
 
 
     public void list() {
-        fileMap.forEach((path, antiPlugin) -> {
-            System.out.println("INFO: " + antiPlugin.getName() + " from " + path);
-        });
+        fileMap.forEach((path, antiPlugin) -> System.out.println("INFO: " + antiPlugin.getName() + " from " + path));
     }
 
 
@@ -99,6 +98,11 @@ public class LocalPluginRepository {
         else {
             throw new Exception("Invalid plugin");
         }
+    }
+
+
+    private void startPlugin(AntiPlugin plugin) {
+        new Thread(plugin::start).start();
     }
 
 
